@@ -1,0 +1,44 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and credentials",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "password": { "type": "string" },
+        "bio": { "type": "string" },
+        "avatar": { "type": "string" }
+      },
+      "required": ["id", "name", "password"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Chat message",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "type": { "type": "string", "enum": ["text", "image", "file"] },
+        "fileUrl": { "type": "string" }
+      },
+      "required": ["senderId", "timestamp", "type"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Global chat messages"
+    },
+    "/typing/{typingId}": {
+      "schema": "object",
+      "description": "Real-time typing indicators"
+    }
+  }
+}

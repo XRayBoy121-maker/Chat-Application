@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isValidUser(data) {
+      return data.id is string && data.name is string && data.password is string;
+    }
+
+    function isValidMessage(data) {
+      return data.senderId is string && data.timestamp is number && data.type in ['text', 'image', 'file', 'video', 'audio', 'sticker'];
+    }
+
+    match /users/{userId} {
+      allow read: if true; // Allow reading profiles for chat
+      allow write: if true; // Temporary for custom login/profile update
+    }
+
+    match /messages/{messageId} {
+      allow read: if true;
+      allow create: if isValidMessage(request.resource.data);
+      allow update, delete: if false;
+    }
+
+    match /typing/{typingId} {
+      allow read: if true;
+      allow write: if true; // Temporary for real-time typing indicators
+    }
+  }
+}

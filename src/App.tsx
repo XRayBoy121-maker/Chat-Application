@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { io, Socket } from 'socket.io-client';
 import { 
   Send, 
   Image as ImageIcon, 
@@ -17,6 +16,24 @@ import {
 } from 'lucide-react';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  collection, 
+  query, 
+  orderBy, 
+  onSnapshot, 
+  addDoc, 
+  setDoc, 
+  doc, 
+  getDoc, 
+  getDocs, 
+  updateDoc, 
+  serverTimestamp, 
+  where,
+  deleteDoc
+} from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { db, auth, storage } from './firebase';
 
 // Types
 interface User {
@@ -49,7 +66,6 @@ export default function App() {
   const [userIdInput, setUserIdInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [error, setError] = useState('');
-  const [socket, setSocket] = useState<Socket | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [activeChat, setActiveChat] = useState<string>('group'); // 'group' or userId
   const [messages, setMessages] = useState<Message[]>([]);
@@ -68,92 +84,131 @@ export default function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Initial Auth and Data Setup
   useEffect(() => {
-    if (user) {
-      const newSocket = io();
-      setSocket(newSocket);
-      newSocket.emit('register', user.id);
+    // Seed initial users
+    const seedUsers = async () => {
+      try {
+        // Cleanup old users
+        const oldUserIds = ['soham', 'alisha', 'dash'];
+        for (const id of oldUserIds) {
+          await deleteDoc(doc(db, 'users', id));
+        }
 
-      newSocket.on('receive_message', (msg: Message) => {
-        setMessages(prev => [...prev, msg]);
-        // Clear typing indicator when message received
-        setTypingUsers(prev => {
-          const chatTarget = msg.to === 'group' ? 'group' : msg.from;
-          const newSet = new Set(prev[chatTarget] || []);
-          newSet.delete(msg.from);
-          return { ...prev, [chatTarget]: newSet };
-        });
+        const initialUsers = [
+          { id: 'sohamsantra196', name: 'Soham Santra', password: 'IdontloveADlab', bio: 'Tech enthusiast & developer', avatar: PREDEFINED_AVATARS[0] },
+          { id: 'alishakhan214', name: 'Alisha Khan', password: 'IdontloveADlab', bio: 'Design lover & creative soul', avatar: PREDEFINED_AVATARS[1] },
+          { id: 'augnikganguly079', name: 'Augnik Ganguly', password: 'IdontloveADlab', bio: 'Chat app explorer', avatar: PREDEFINED_AVATARS[2] },
+          { id: 'srijanaha273', name: 'Srija Naha', password: 'IdontloveADlab', bio: 'Passionate about communication', avatar: PREDEFINED_AVATARS[3] },
+          { id: 'soumajitdutta', name: 'Soumajit Dutta', password: 'IdontloveADlab', bio: 'Always ready to connect', avatar: PREDEFINED_AVATARS[4] }
+        ];
+        for (const u of initialUsers) {
+          // Check if user exists first to avoid overwriting bio/avatar if they changed it
+          const userDoc = await getDoc(doc(db, 'users', u.id));
+          if (!userDoc.exists()) {
+            await setDoc(doc(db, 'users', u.id), { ...u, status: 'offline' });
+          }
+        }
+      } catch (err) {
+        console.error("Error seeding users:", err);
+      }
+    };
+    seedUsers();
+
+    // Listen for all users
+    const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
+      const usersList: User[] = [];
+      snapshot.forEach((doc) => {
+        usersList.push({ id: doc.id, ...doc.data() } as User);
       });
+      setUsers(usersList);
+    }, (err) => console.error("Users listener error:", err));
 
-      newSocket.on('user_typing', ({ from, to, isTyping }) => {
-        setTypingUsers(prev => {
-          const chatTarget = to === 'group' ? 'group' : from;
-          const newSet = new Set(prev[chatTarget] || []);
-          if (isTyping) newSet.add(from);
-          else newSet.delete(from);
-          return { ...prev, [chatTarget]: newSet };
-        });
+    // Listen for messages
+    const q = query(collection(db, 'messages'), orderBy('timestamp', 'asc'));
+    const unsubscribeMessages = onSnapshot(q, (snapshot) => {
+      const msgs: Message[] = [];
+      snapshot.forEach((doc) => {
+        msgs.push(doc.data() as Message);
       });
+      setMessages(msgs);
+    }, (err) => console.error("Messages listener error:", err));
 
-      newSocket.on('user_status', ({ userId, status }) => {
-        setUsers(prev => prev.map(u => u.id === userId ? { ...u, status } : u));
+    // Listen for typing indicators
+    const unsubscribeTyping = onSnapshot(collection(db, 'typing'), (snapshot) => {
+      const newTyping: Record<string, Set<string>> = {};
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        const { from, to } = data;
+        if (!newTyping[to]) newTyping[to] = new Set();
+        newTyping[to].add(from);
       });
+      setTypingUsers(newTyping);
+    }, (err) => console.error("Typing listener error:", err));
 
-      fetchUsers();
-
-      return () => {
-        newSocket.disconnect();
-      };
-    }
-  }, [user]);
+    return () => {
+      unsubscribeUsers();
+      unsubscribeMessages();
+      unsubscribeTyping();
+    };
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, activeChat]);
 
-  const fetchUsers = async () => {
-    const res = await fetch('/api/users');
-    const data = await res.json();
-    setUsers(data);
-  };
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    const res = await fetch('/api/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: userIdInput, password: passwordInput }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      setUser(data.user);
-      setEditBio(data.user.bio);
-      setEditAvatar(data.user.avatar);
-    } else {
-      setError(data.message);
+    
+    try {
+      const userDoc = await getDoc(doc(db, 'users', userIdInput));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        if (userData.password === passwordInput) {
+          const loggedInUser = { id: userDoc.id, ...userData } as User;
+          setUser(loggedInUser);
+          setEditBio(loggedInUser.bio);
+          setEditAvatar(loggedInUser.avatar);
+          // Update status to online
+          await updateDoc(doc(db, 'users', userDoc.id), { status: 'online' });
+        } else {
+          setError('Invalid password');
+        }
+      } else {
+        setError('User not found');
+      }
+    } catch (err) {
+      setError('Login failed. Please try again.');
+      console.error(err);
     }
   };
 
-  const handleTyping = () => {
-    if (!socket || !user) return;
+  const handleTyping = async () => {
+    if (!user) return;
 
-    socket.emit('typing', { from: user.id, to: activeChat, isTyping: true });
+    const typingId = `${user.id}_${activeChat}`;
+    await setDoc(doc(db, 'typing', typingId), {
+      from: user.id,
+      to: activeChat,
+      timestamp: serverTimestamp()
+    });
 
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     
-    typingTimeoutRef.current = setTimeout(() => {
-      socket.emit('typing', { from: user.id, to: activeChat, isTyping: false });
-    }, 2000);
+    typingTimeoutRef.current = setTimeout(async () => {
+      await deleteDoc(doc(db, 'typing', typingId));
+    }, 3000);
   };
 
-  const handleSendMessage = (type: Message['type'] = 'text', mediaUrl?: string) => {
+  const handleSendMessage = async (type: Message['type'] = 'text', mediaUrl?: string) => {
     if (!inputText.trim() && !mediaUrl) return;
-    if (!socket || !user) return;
+    if (!user) return;
 
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
-      socket.emit('typing', { from: user.id, to: activeChat, isTyping: false });
+      const typingId = `${user.id}_${activeChat}`;
+      await deleteDoc(doc(db, 'typing', typingId));
     }
 
     const newMessage: Message = {
@@ -165,30 +220,32 @@ export default function App() {
       mediaUrl,
     };
 
-    socket.emit('send_message', newMessage);
-    setMessages(prev => [...prev, newMessage]);
-    setInputText('');
-    setShowEmojiPicker(false);
+    try {
+      await addDoc(collection(db, 'messages'), newMessage);
+      setInputText('');
+      setShowEmojiPicker(false);
+    } catch (err) {
+      console.error("Error sending message:", err);
+    }
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !user) return;
 
-    const formData = new FormData();
-    formData.append('file', file);
+    try {
+      const storageRef = ref(storage, `chat/${Date.now()}_${file.name}`);
+      const snapshot = await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(snapshot.ref);
 
-    const res = await fetch('/api/upload', {
-      method: 'POST',
-      body: formData,
-    });
-    const data = await res.json();
+      let type: Message['type'] = 'image';
+      if (file.type.startsWith('video/')) type = 'video';
+      if (file.type.startsWith('audio/')) type = 'audio';
 
-    let type: Message['type'] = 'image';
-    if (file.type.startsWith('video/')) type = 'video';
-    if (file.type.startsWith('audio/')) type = 'audio';
-
-    handleSendMessage(type, data.url);
+      handleSendMessage(type, url);
+    } catch (err) {
+      console.error("Error uploading file:", err);
+    }
   };
 
   const startRecording = async () => {
@@ -206,15 +263,11 @@ export default function App() {
 
       recorder.onstop = async () => {
         const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        const formData = new FormData();
-        formData.append('file', audioBlob, 'recording.webm');
-
-        const res = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        });
-        const data = await res.json();
-        handleSendMessage('audio', data.url);
+        const storageRef = ref(storage, `audio/${Date.now()}.webm`);
+        const snapshot = await uploadBytes(storageRef, audioBlob);
+        const url = await getDownloadURL(snapshot.ref);
+        
+        handleSendMessage('audio', url);
         stream.getTracks().forEach(track => track.stop());
       };
 
@@ -238,32 +291,30 @@ export default function App() {
 
   const handleUpdateProfile = async () => {
     if (!user) return;
-    const res = await fetch('/api/profile/update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: user.id, bio: editBio, avatar: editAvatar }),
-    });
-    const data = await res.json();
-    if (data.success) {
+    try {
+      await updateDoc(doc(db, 'users', user.id), {
+        bio: editBio,
+        avatar: editAvatar
+      });
       setUser({ ...user, bio: editBio, avatar: editAvatar });
       setIsEditingProfile(false);
-      fetchUsers();
+    } catch (err) {
+      console.error("Error updating profile:", err);
     }
   };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !user) return;
 
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const res = await fetch('/api/upload', {
-      method: 'POST',
-      body: formData,
-    });
-    const data = await res.json();
-    setEditAvatar(data.url);
+    try {
+      const storageRef = ref(storage, `avatars/${user.id}_${Date.now()}`);
+      const snapshot = await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(snapshot.ref);
+      setEditAvatar(url);
+    } catch (err) {
+      console.error("Error uploading avatar:", err);
+    }
   };
 
   const STICKERS = [
@@ -340,7 +391,12 @@ export default function App() {
         <div className="p-6 border-bottom border-neutral-800 flex items-center justify-between">
           <h2 className="text-xl font-bold text-white tracking-tight">Let's Connect</h2>
           <button 
-            onClick={() => setUser(null)}
+            onClick={async () => {
+              if (user) {
+                await updateDoc(doc(db, 'users', user.id), { status: 'offline' });
+              }
+              setUser(null);
+            }}
             className="p-2 hover:bg-neutral-800 rounded-full transition-colors text-neutral-400 hover:text-white"
           >
             <LogOut size={20} />
