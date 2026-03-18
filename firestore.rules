@@ -1,22 +1,54 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper functions
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
     function isAuthenticated() {
       return request.auth != null;
     }
 
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "playzthedashboy@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
     function isValidUser(data) {
-      return data.id is string && data.name is string && data.password is string;
+      return hasRequiredFields(['id', 'name', 'password']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 50 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.password is string && data.password.size() > 0 && data.password.size() < 100;
     }
 
     function isValidMessage(data) {
-      return data.senderId is string && data.timestamp is number && data.type in ['text', 'image', 'file', 'video', 'audio', 'sticker'];
+      return hasRequiredFields(['from', 'to', 'timestamp', 'type']) &&
+             data.from is string && data.from.size() > 0 && data.from.size() < 50 &&
+             data.to is string && data.to.size() > 0 && data.to.size() < 50 &&
+             data.timestamp is number &&
+             data.type in ['text', 'image', 'video', 'audio', 'sticker'] &&
+             (!('content' in data) || (data.content is string && data.content.size() < 5000)) &&
+             (!('mediaUrl' in data) || (data.mediaUrl is string && data.mediaUrl.size() < 1000));
     }
 
+    // ===============================================================
+    // Rules
+    // ===============================================================
     match /users/{userId} {
-      allow read: if true; // Allow reading profiles for chat
-      allow write: if true; // Temporary for custom login/profile update
+      allow read: if true; // Public profiles for chat
+      allow create, update: if isValidUser(request.resource.data);
+      allow delete: if true; // Allow seeding/cleanup for now
     }
 
     match /messages/{messageId} {

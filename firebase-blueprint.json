@@ -18,13 +18,14 @@
       "description": "Chat message",
       "type": "object",
       "properties": {
-        "senderId": { "type": "string" },
-        "text": { "type": "string" },
+        "from": { "type": "string" },
+        "to": { "type": "string" },
+        "content": { "type": "string" },
         "timestamp": { "type": "number" },
-        "type": { "type": "string", "enum": ["text", "image", "file"] },
-        "fileUrl": { "type": "string" }
+        "type": { "type": "string", "enum": ["text", "image", "video", "audio", "sticker"] },
+        "mediaUrl": { "type": "string" }
       },
-      "required": ["senderId", "timestamp", "type"]
+      "required": ["from", "to", "timestamp", "type"]
     }
   },
   "firestore": {

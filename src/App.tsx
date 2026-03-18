@@ -36,6 +36,57 @@ import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { db, auth, storage } from './firebase';
 
 // Types
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId: string | undefined;
+    email: string | null | undefined;
+    emailVerified: boolean | undefined;
+    isAnonymous: boolean | undefined;
+    tenantId: string | null | undefined;
+    providerInfo: {
+      providerId: string;
+      displayName: string | null;
+      email: string | null;
+      photoUrl: string | null;
+    }[];
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        email: provider.email,
+        photoUrl: provider.photoURL
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
 interface User {
   id: string;
   name: string;
@@ -122,7 +173,7 @@ export default function App() {
         usersList.push({ id: doc.id, ...doc.data() } as User);
       });
       setUsers(usersList);
-    }, (err) => console.error("Users listener error:", err));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'users'));
 
     // Listen for messages
     const q = query(collection(db, 'messages'), orderBy('timestamp', 'asc'));
@@ -132,7 +183,7 @@ export default function App() {
         msgs.push(doc.data() as Message);
       });
       setMessages(msgs);
-    }, (err) => console.error("Messages listener error:", err));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'messages'));
 
     // Listen for typing indicators
     const unsubscribeTyping = onSnapshot(collection(db, 'typing'), (snapshot) => {
@@ -144,7 +195,7 @@ export default function App() {
         newTyping[to].add(from);
       });
       setTypingUsers(newTyping);
-    }, (err) => console.error("Typing listener error:", err));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'typing'));
 
     return () => {
       unsubscribeUsers();
@@ -211,21 +262,24 @@ export default function App() {
       await deleteDoc(doc(db, 'typing', typingId));
     }
 
-    const newMessage: Message = {
+    const newMessage: any = {
       from: user.id,
       to: activeChat,
       content: inputText,
       type,
       timestamp: Date.now(),
-      mediaUrl,
     };
+
+    if (mediaUrl) {
+      newMessage.mediaUrl = mediaUrl;
+    }
 
     try {
       await addDoc(collection(db, 'messages'), newMessage);
       setInputText('');
       setShowEmojiPicker(false);
     } catch (err) {
-      console.error("Error sending message:", err);
+      handleFirestoreError(err, OperationType.CREATE, 'messages');
     }
   };
 
