@@ -1,0 +1,5 @@
+{
+  "name": "Let's Connect",
+  "description": "A real-time group and private chat application for team collaboration with media sharing and user profiles.",
+  "requestFramePermissions": ["microphone"]
+}
