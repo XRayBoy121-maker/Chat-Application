@@ -439,11 +439,11 @@ export default function App() {
   });
 
   return (
-    <div className="h-screen bg-neutral-950 flex overflow-hidden text-neutral-200 font-sans">
+    <div className="h-screen bg-neutral-950 flex overflow-hidden text-neutral-200 font-sans selection:bg-emerald-500/30">
       {/* Sidebar */}
-      <div className="w-80 border-r border-neutral-800 flex flex-col bg-neutral-900/50">
-        <div className="p-6 border-bottom border-neutral-800 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white tracking-tight">Let's Connect App</h2>
+      <div className="w-80 lg:w-96 border-r border-neutral-800 flex flex-col bg-neutral-900/50 backdrop-blur-xl">
+        <div className="p-6 border-b border-neutral-800 flex items-center justify-between">
+          <h2 className="text-xl lg:text-2xl font-bold text-white tracking-tight">Let's Connect</h2>
           <button 
             onClick={async () => {
               if (user) {
@@ -451,7 +451,8 @@ export default function App() {
               }
               setUser(null);
             }}
-            className="p-2 hover:bg-neutral-800 rounded-full transition-colors text-neutral-400 hover:text-white"
+            className="p-2.5 hover:bg-neutral-800 rounded-full transition-all text-neutral-400 hover:text-white active:scale-90"
+            title="Sign Out"
           >
             <LogOut size={20} />
           </button>
@@ -468,37 +469,37 @@ export default function App() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-2 space-y-1">
+        <div className="flex-1 overflow-y-auto px-3 space-y-1 py-4">
           <button
             onClick={() => setActiveChat('group')}
-            className={`w-full flex items-center gap-3 p-3 rounded-2xl transition-all ${activeChat === 'group' ? 'bg-emerald-600/10 text-emerald-400' : 'hover:bg-neutral-800 text-neutral-400'}`}
+            className={`w-full flex items-center gap-3 p-4 rounded-2xl transition-all ${activeChat === 'group' ? 'bg-emerald-600/20 text-emerald-400 ring-1 ring-emerald-500/30' : 'hover:bg-neutral-800/50 text-neutral-400'}`}
           >
-            <div className="w-12 h-12 rounded-2xl bg-emerald-600 flex items-center justify-center text-white font-bold text-lg">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-emerald-900/20">
               G
             </div>
-            <div className="text-left">
-              <div className="font-semibold text-white">Group Chat</div>
-              <div className="text-xs opacity-60">All members</div>
+            <div className="text-left flex-1">
+              <div className="font-bold text-white">Group Chat</div>
+              <div className="text-xs opacity-60">All members connected</div>
             </div>
           </button>
 
-          <div className="mt-6 px-4 mb-2 text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Direct Messages</div>
+          <div className="mt-8 px-4 mb-3 text-[11px] font-bold text-neutral-500 uppercase tracking-[0.2em]">Direct Messages</div>
           
           {users.filter(u => u.id !== user.id).map(u => (
             <button
               key={u.id}
               onClick={() => setActiveChat(u.id)}
-              className={`w-full flex items-center gap-3 p-3 rounded-2xl transition-all ${activeChat === u.id ? 'bg-emerald-600/10 text-emerald-400' : 'hover:bg-neutral-800 text-neutral-400'}`}
+              className={`w-full flex items-center gap-3 p-4 rounded-2xl transition-all ${activeChat === u.id ? 'bg-emerald-600/20 text-emerald-400 ring-1 ring-emerald-500/30' : 'hover:bg-neutral-800/50 text-neutral-400'}`}
             >
               <div className="relative">
-                <img src={u.avatar} alt={u.name} className="w-12 h-12 rounded-2xl object-cover bg-neutral-800" />
+                <img src={u.avatar} alt={u.name} className="w-12 h-12 rounded-2xl object-cover bg-neutral-800 shadow-md" />
                 {u.status === 'online' && (
-                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-neutral-900 rounded-full"></div>
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-[3px] border-neutral-900 rounded-full shadow-sm"></div>
                 )}
               </div>
               <div className="text-left flex-1 min-w-0">
-                <div className="font-semibold text-white truncate">{u.name}</div>
-                <div className="text-xs opacity-60 truncate">{u.bio}</div>
+                <div className="font-bold text-white truncate">{u.name}</div>
+                <div className="text-xs opacity-60 truncate font-medium">{u.bio}</div>
               </div>
             </button>
           ))}
@@ -526,86 +527,97 @@ export default function App() {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col bg-neutral-950">
         {/* Chat Header */}
-        <div className="h-20 border-b border-neutral-800 flex items-center justify-between px-8 bg-neutral-900/30">
-          <div className="flex items-center gap-4">
+        <div className="h-24 border-b border-neutral-800 flex items-center justify-between px-10 bg-neutral-900/40 backdrop-blur-md sticky top-0 z-40">
+          <div className="flex items-center gap-5">
             {activeChat === 'group' ? (
               <>
-                <div className="w-12 h-12 rounded-2xl bg-emerald-600 flex items-center justify-center text-white font-bold text-lg">G</div>
+                <div className="w-14 h-14 rounded-2xl bg-emerald-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-emerald-900/20">G</div>
                 <div>
-                  <h3 className="font-bold text-white">Group Chat</h3>
-                  <p className="text-xs text-emerald-500">Active now</p>
+                  <h3 className="text-lg font-bold text-white tracking-tight">Group Chat</h3>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                    <p className="text-xs text-emerald-500 font-medium">Online</p>
+                  </div>
                 </div>
               </>
             ) : (
               <>
-                <img 
-                  src={users.find(u => u.id === activeChat)?.avatar} 
-                  alt="avatar" 
-                  className="w-12 h-12 rounded-2xl object-cover bg-neutral-800 cursor-pointer"
-                  onClick={() => setShowProfileModal(users.find(u => u.id === activeChat) || null)}
-                />
+                <div className="relative">
+                  <img 
+                    src={users.find(u => u.id === activeChat)?.avatar} 
+                    alt="avatar" 
+                    className="w-14 h-14 rounded-2xl object-cover bg-neutral-800 cursor-pointer shadow-md hover:ring-2 hover:ring-emerald-500/50 transition-all"
+                    onClick={() => setShowProfileModal(users.find(u => u.id === activeChat) || null)}
+                  />
+                  {users.find(u => u.id === activeChat)?.status === 'online' && (
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-[3px] border-neutral-900 rounded-full shadow-sm"></div>
+                  )}
+                </div>
                 <div>
-                  <h3 className="font-bold text-white cursor-pointer hover:underline" onClick={() => setShowProfileModal(users.find(u => u.id === activeChat) || null)}>
+                  <h3 className="text-lg font-bold text-white cursor-pointer hover:text-emerald-400 transition-colors tracking-tight" onClick={() => setShowProfileModal(users.find(u => u.id === activeChat) || null)}>
                     {users.find(u => u.id === activeChat)?.name}
                   </h3>
-                  <p className="text-xs text-neutral-500">Private Message</p>
+                  <p className="text-xs text-neutral-500 font-medium">@{activeChat}</p>
                 </div>
               </>
             )}
           </div>
-          <div className="flex items-center gap-4 text-neutral-400">
-            <button className="p-2 hover:bg-neutral-800 rounded-full transition-colors"><Search size={20} /></button>
-            <button className="p-2 hover:bg-neutral-800 rounded-full transition-colors"><MoreVertical size={20} /></button>
+          <div className="flex items-center gap-5 text-neutral-400">
+            <button className="p-2.5 hover:bg-neutral-800 rounded-xl transition-all hover:text-white"><Search size={22} /></button>
+            <button className="p-2.5 hover:bg-neutral-800 rounded-xl transition-all hover:text-white"><MoreVertical size={22} /></button>
           </div>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-8 space-y-6">
+        <div className="flex-1 overflow-y-auto p-10 space-y-8 scroll-smooth">
           {filteredMessages.map((msg, idx) => {
             const isMe = msg.from === user.id;
             const sender = users.find(u => u.id === msg.from);
             return (
               <motion.div 
-                initial={{ opacity: 0, x: isMe ? 20 : -20 }}
-                animate={{ opacity: 1, x: 0 }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
                 key={idx} 
-                className={`flex ${isMe ? 'justify-end' : 'justify-start'} items-end gap-3`}
+                className={`flex ${isMe ? 'justify-end' : 'justify-start'} items-end gap-4`}
               >
                 {!isMe && (
                   <img 
                     src={sender?.avatar} 
                     alt="avatar" 
-                    className="w-8 h-8 rounded-lg object-cover bg-neutral-800 cursor-pointer" 
+                    className="w-10 h-10 rounded-xl object-cover bg-neutral-800 cursor-pointer shadow-sm hover:ring-2 hover:ring-emerald-500/50 transition-all" 
                     onClick={() => setShowProfileModal(sender || null)}
                   />
                 )}
-                <div className={`max-w-[70%] group`}>
-                  {!isMe && activeChat === 'group' && (
+                <div className={`max-w-[75%] lg:max-w-[65%] group`}>
+                  {!isMe && (
                     <div 
-                      className="text-[10px] font-bold text-neutral-500 mb-1 ml-1 cursor-pointer hover:text-emerald-500 transition-colors"
+                      className="text-[11px] font-bold text-neutral-500 mb-1.5 ml-1.5 cursor-pointer hover:text-emerald-500 transition-colors tracking-wide"
                       onClick={() => setShowProfileModal(sender || null)}
                     >
                       {sender?.name}
                     </div>
                   )}
-                  <div className={`
-                    p-4 rounded-3xl shadow-sm
-                    ${isMe ? 'bg-emerald-600 text-white rounded-br-none' : 'bg-neutral-900 text-neutral-200 rounded-bl-none'}
-                  `}>
-                    {msg.type === 'text' && <p className="text-sm leading-relaxed">{msg.content}</p>}
+                  <div 
+                    dir="ltr"
+                    className={`
+                      p-4 lg:p-5 rounded-[2rem] shadow-sm relative
+                      ${isMe ? 'bg-emerald-600 text-white rounded-br-none' : 'bg-neutral-900 text-neutral-200 rounded-bl-none'}
+                    `}
+                  >
+                    {msg.type === 'text' && <p className="text-sm lg:text-base leading-relaxed whitespace-pre-wrap">{msg.content}</p>}
                     {msg.type === 'sticker' && (
-                      <img src={msg.mediaUrl} alt="sticker" className="w-24 h-24" />
+                      <img src={msg.mediaUrl} alt="sticker" className="w-28 h-28 lg:w-32 lg:h-32" />
                     )}
                     {msg.type === 'image' && (
-                      <img src={msg.mediaUrl} alt="shared" className="max-w-full rounded-xl mb-2" />
+                      <img src={msg.mediaUrl} alt="shared" className="max-w-full rounded-2xl mb-2 shadow-lg" />
                     )}
                     {msg.type === 'video' && (
-                      <video src={msg.mediaUrl} controls className="max-w-full rounded-xl mb-2" />
+                      <video src={msg.mediaUrl} controls className="max-w-full rounded-2xl mb-2 shadow-lg" />
                     )}
                     {msg.type === 'audio' && (
                       <audio src={msg.mediaUrl} controls className="max-w-full" />
                     )}
-                    <div className={`text-[9px] mt-2 opacity-50 ${isMe ? 'text-right' : 'text-left'}`}>
+                    <div className={`text-[10px] mt-2.5 font-medium opacity-60 ${isMe ? 'text-right' : 'text-left'}`}>
                       {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </div>
                   </div>
@@ -635,30 +647,30 @@ export default function App() {
         </div>
 
         {/* Input Area */}
-        <div className="p-6 bg-neutral-900/50 border-t border-neutral-800 relative">
+        <div className="p-8 bg-neutral-900/60 border-t border-neutral-800 relative backdrop-blur-xl">
           <AnimatePresence>
             {showEmojiPicker && (
               <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="absolute bottom-full mb-4 left-6 z-50"
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                className="absolute bottom-full mb-6 left-8 z-50 shadow-2xl"
               >
                 <EmojiPicker onEmojiClick={onEmojiClick} theme={'dark' as any} />
               </motion.div>
             )}
             {showStickers && (
               <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="absolute bottom-full mb-4 left-16 z-50 bg-neutral-900 border border-neutral-800 p-4 rounded-3xl shadow-2xl grid grid-cols-3 gap-4"
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                className="absolute bottom-full mb-6 left-20 z-50 bg-neutral-900 border border-neutral-800 p-6 rounded-[2.5rem] shadow-2xl grid grid-cols-3 gap-5"
               >
                 {STICKERS.map((s, i) => (
                   <img 
                     key={i} 
                     src={s} 
-                    className="w-16 h-16 cursor-pointer hover:scale-110 transition-transform" 
+                    className="w-20 h-20 cursor-pointer hover:scale-110 transition-transform active:scale-90" 
                     onClick={() => {
                       handleSendMessage('sticker', s);
                       setShowStickers(false);
@@ -669,31 +681,31 @@ export default function App() {
             )}
           </AnimatePresence>
 
-          <div className="flex items-center gap-4 max-w-6xl mx-auto">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-5 max-w-7xl mx-auto">
+            <div className="flex items-center gap-2.5">
               <button 
                 onClick={() => {
                   setShowEmojiPicker(!showEmojiPicker);
                   setShowStickers(false);
                 }}
-                className={`p-3 rounded-2xl transition-colors ${showEmojiPicker ? 'bg-emerald-600 text-white' : 'hover:bg-neutral-800 text-neutral-400 hover:text-white'}`}
+                className={`p-3.5 rounded-2xl transition-all active:scale-90 ${showEmojiPicker ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/30' : 'hover:bg-neutral-800 text-neutral-400 hover:text-white'}`}
               >
-                <Smile size={22} />
+                <Smile size={24} />
               </button>
               <button 
                 onClick={() => {
                   setShowStickers(!showStickers);
                   setShowEmojiPicker(false);
                 }}
-                className={`p-3 rounded-2xl transition-colors ${showStickers ? 'bg-emerald-600 text-white' : 'hover:bg-neutral-800 text-neutral-400 hover:text-white'}`}
+                className={`p-3.5 rounded-2xl transition-all active:scale-90 ${showStickers ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/30' : 'hover:bg-neutral-800 text-neutral-400 hover:text-white'}`}
               >
-                <ImageIcon size={22} />
+                <ImageIcon size={24} />
               </button>
               <button 
                 onClick={() => fileInputRef.current?.click()}
-                className="p-3 hover:bg-neutral-800 rounded-2xl transition-colors text-neutral-400 hover:text-white"
+                className="p-3.5 hover:bg-neutral-800 rounded-2xl transition-all text-neutral-400 hover:text-white active:scale-90"
               >
-                <Paperclip size={22} />
+                <Paperclip size={24} />
               </button>
               <input 
                 type="file" 
@@ -714,25 +726,25 @@ export default function App() {
                 }}
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                 placeholder="Type a message..."
-                className="w-full bg-neutral-800 border-none rounded-2xl px-6 py-4 text-sm focus:ring-2 focus:ring-emerald-500/30 transition-all"
+                className="w-full bg-neutral-800/80 border-none rounded-[2rem] px-8 py-5 text-base lg:text-lg focus:ring-2 focus:ring-emerald-500/40 transition-all placeholder:text-neutral-600"
               />
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <button 
                 onMouseDown={startRecording}
                 onMouseUp={stopRecording}
                 onTouchStart={startRecording}
                 onTouchEnd={stopRecording}
-                className={`p-4 rounded-2xl transition-all ${isRecording ? 'bg-red-500 text-white animate-pulse' : 'bg-neutral-800 text-neutral-400 hover:text-white'}`}
+                className={`p-5 rounded-[1.5rem] transition-all active:scale-90 ${isRecording ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-900/30' : 'bg-neutral-800 text-neutral-400 hover:text-white'}`}
               >
-                <Mic size={22} />
+                <Mic size={24} />
               </button>
               <button 
                 onClick={() => handleSendMessage()}
-                className="p-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl transition-all shadow-lg shadow-emerald-900/20 active:scale-95"
+                className="p-5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-[1.5rem] transition-all shadow-xl shadow-emerald-900/30 active:scale-95"
               >
-                <Send size={22} />
+                <Send size={24} />
               </button>
             </div>
           </div>
