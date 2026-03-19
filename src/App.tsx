@@ -391,7 +391,7 @@ export default function App() {
           className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-3xl p-8 shadow-2xl"
         >
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">Let's Connect</h1>
+            <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">Let's Connect App</h1>
             <p className="text-neutral-400">Sign in to start chatting</p>
           </div>
           <form onSubmit={handleLogin} className="space-y-6">
@@ -443,7 +443,7 @@ export default function App() {
       {/* Sidebar */}
       <div className="w-80 border-r border-neutral-800 flex flex-col bg-neutral-900/50">
         <div className="p-6 border-bottom border-neutral-800 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white tracking-tight">Let's Connect</h2>
+          <h2 className="text-xl font-bold text-white tracking-tight">Let's Connect App</h2>
           <button 
             onClick={async () => {
               if (user) {

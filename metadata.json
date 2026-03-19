@@ -1,5 +1,5 @@
 {
-  "name": "Let's Connect",
+  "name": "Let's Connect App",
   "description": "A real-time group and private chat application for team collaboration with media sharing and user profiles.",
   "requestFramePermissions": ["microphone"]
 }
